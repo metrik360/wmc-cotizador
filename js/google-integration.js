@@ -14,16 +14,27 @@ let selectedSyncOption = null;
  */
 async function initializeGoogleIntegration() {
     try {
-        // Intentar cargar configuración
-        const configResponse = await fetch('/js/google-config.js');
+        // Intentar cargar configuración local primero, luego pública
+        let GOOGLE_CONFIG;
 
-        if (!configResponse.ok) {
-            console.log('Google config not found - sync disabled');
-            return false;
+        try {
+            // Intento 1: Cargar google-config.js (desarrollo local)
+            const localConfig = await import('./google-config.js');
+            GOOGLE_CONFIG = localConfig.GOOGLE_CONFIG;
+            console.log('Using local Google config');
+        } catch (error) {
+            // Intento 2: Cargar google-config-public.js (GitHub Pages)
+            try {
+                const publicConfig = await import('./google-config-public.js');
+                GOOGLE_CONFIG = publicConfig.GOOGLE_CONFIG;
+                console.log('Using public Google config');
+            } catch (publicError) {
+                console.log('Google config not found - sync disabled');
+                return false;
+            }
         }
 
-        // Importar configuración dinámicamente
-        const { GOOGLE_CONFIG } = await import('./google-config.js');
+        // Importar módulos necesarios
         const { initGoogleAuth, isReady } = await import('./google-auth.js');
         const { SyncManager, setupAutoSync } = await import('./google-sync.js');
 
