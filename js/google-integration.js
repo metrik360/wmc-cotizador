@@ -471,6 +471,39 @@ function integrateWithDataModule() {
     console.log('Data module integration complete');
 }
 
+/**
+ * Forzar push de datos locales a Google Sheets (usar desde consola)
+ */
+async function forceLocalToRemote() {
+    if (!syncManager) {
+        console.error('❌ Sync manager no inicializado');
+        return false;
+    }
+
+    console.log('🚀 Forzando push de datos locales a Google Sheets...');
+    showToast('Subiendo datos locales a Google Sheets...', 'info');
+
+    try {
+        const result = await syncManager.initialPush();
+        if (result.success) {
+            console.log('✅ Datos locales subidos exitosamente');
+            showToast('Datos locales subidos exitosamente a Google Sheets', 'success');
+
+            // Recargar para sincronizar
+            setTimeout(() => location.reload(), 2000);
+            return true;
+        } else {
+            console.error('❌ Error al subir datos:', result.error);
+            showToast('Error al subir datos: ' + result.error, 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        showToast('Error: ' + error.message, 'error');
+        return false;
+    }
+}
+
 // Exponer funciones globalmente
 window.openGoogleSetup = openGoogleSetup;
 window.signInGoogle = signInGoogle;
@@ -478,6 +511,7 @@ window.signOutGoogle = signOutGoogle;
 window.selectSyncOption = selectSyncOption;
 window.initializeGoogleSync = initializeGoogleSync;
 window.manualSync = manualSync;
+window.forceLocalToRemote = forceLocalToRemote; // Nueva función para forzar push
 
 // Inicializar al cargar
 if (document.readyState === 'loading') {
