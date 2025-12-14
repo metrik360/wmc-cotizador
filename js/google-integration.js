@@ -14,42 +14,49 @@ let selectedSyncOption = null;
  */
 async function initializeGoogleIntegration() {
     try {
-        // Intentar cargar configuración local primero, luego pública
+        // Intentar cargar configuración pública primero (para GitHub Pages)
         let GOOGLE_CONFIG;
 
         try {
-            // Intento 1: Cargar google-config.js (desarrollo local)
-            const localConfig = await import('./google-config.js');
-            GOOGLE_CONFIG = localConfig.GOOGLE_CONFIG;
-            console.log('Using local Google config');
-        } catch (error) {
-            // Intento 2: Cargar google-config-public.js (GitHub Pages)
+            // Intento 1: Cargar google-config-public.js (GitHub Pages)
+            const publicConfig = await import('./google-config-public.js');
+            GOOGLE_CONFIG = publicConfig.GOOGLE_CONFIG;
+            console.log('✅ Using public Google config (GitHub Pages)');
+        } catch (publicError) {
+            // Intento 2: Cargar google-config.js (desarrollo local)
             try {
-                const publicConfig = await import('./google-config-public.js');
-                GOOGLE_CONFIG = publicConfig.GOOGLE_CONFIG;
-                console.log('Using public Google config');
-            } catch (publicError) {
-                console.log('Google config not found - sync disabled');
+                const localConfig = await import('./google-config.js');
+                GOOGLE_CONFIG = localConfig.GOOGLE_CONFIG;
+                console.log('✅ Using local Google config (development)');
+            } catch (localError) {
+                console.warn('❌ Google config not found - sync disabled');
+                console.warn('Public config error:', publicError);
+                console.warn('Local config error:', localError);
                 return false;
             }
         }
 
         // Importar módulos necesarios
+        console.log('📦 Loading Google modules...');
         const { initGoogleAuth, isReady } = await import('./google-auth.js');
         const { SyncManager, setupAutoSync } = await import('./google-sync.js');
 
         // Inicializar autenticación
+        console.log('🔐 Initializing Google Auth...');
         await initGoogleAuth(
             GOOGLE_CONFIG,
             onAuthSuccess,
             onAuthFailure
         );
+        console.log('✅ Google Auth initialized');
 
         // Crear sync manager
+        console.log('🔄 Creating Sync Manager...');
         syncManager = new SyncManager(
             GOOGLE_CONFIG.SPREADSHEET_ID,
             GOOGLE_CONFIG.SHEET_NAMES
         );
+        console.log('✅ Sync Manager created');
 
         // Configurar callbacks
         syncManager.on('start', onSyncStart);
@@ -60,20 +67,24 @@ async function initializeGoogleIntegration() {
         // Verificar si ya está autenticado
         const { isAuthenticated, requestAuth } = await import('./google-auth.js');
         if (isAuthenticated()) {
+            console.log('✅ Already authenticated');
             onAuthSuccess();
         } else {
             // Solicitar autenticación automáticamente al inicio
-            console.log('Requesting automatic authentication...');
+            console.log('🔓 Requesting authentication...');
             showToast('Conectando con Google Sheets...', 'info');
             requestAuth('');
         }
 
         isGoogleEnabled = true;
-        console.log('Google Sheets integration enabled');
+        console.log('✅ Google Sheets integration enabled successfully');
         return true;
 
     } catch (error) {
-        console.error('Failed to initialize Google integration:', error);
+        console.error('❌ Failed to initialize Google integration:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        showToast('Error al inicializar Google Sheets: ' + error.message, 'error');
         return false;
     }
 }
